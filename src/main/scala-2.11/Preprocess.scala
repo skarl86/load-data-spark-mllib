@@ -10,6 +10,8 @@ import scala.util.matching.Regex
   * Created by NK on 2016. 10. 6..
   */
 object Preprocess {
+  val MONTHLY = 12
+
   case class RawData(loanStatus:Boolean,
                      annualIncome:Double,
                      creditAge:String,
@@ -52,7 +54,7 @@ object Preprocess {
     preDataDF.show(5)
     preDataDF.select("term").distinct().show(100)
 
-    preDataDF.limit(5).rdd.map(row => calculateTerm(row(11).toString)).foreach(println)
+    preDataDF.limit(5).rdd.map(row => calculatePTI(row(13).toString, row(1).toString)).foreach(println)
   }
 
   def manipulateData(row:Row) = {
@@ -69,9 +71,9 @@ object Preprocess {
     val total_acc = row(10)
     val term = row(11)
     val dti = row(12)
-    val installment = row(13)
+    val installment = row(13)   // The monthly payment owed by the borrower if the loan originates.
     val revol_util = row(14)
-    val revol_bal = row(15)
+    val revol_bal = row(15)     // Total credit revolving balance
 
     var new_loan_status = false
     var new_annual_inc = 0.0
@@ -86,7 +88,7 @@ object Preprocess {
     var new_total_acc = 0
     var new_term = 0
     var new_dti = 0.0
-    var new_installment = 0
+    var new_itp = 0             // Ratio of the loan’s monthly payments to monthly income.
     var new_revol_util = 0.0
     var new_revol_bal = 0.0
 
@@ -180,6 +182,30 @@ object Preprocess {
 
       len.toString().toInt
     }
+  }
 
+  /**
+    * Ratio of the loan’s monthly payments to monthly income.
+    * @param installment  The monthly payment owed by the borrower if the loan originates.
+    * @param annual_inc   연간 수입.
+    * @return pti
+    */
+  def calculatePTI(installment:String, annual_inc:String) = {
+    val mon_pay = installment.toDouble
+    val ann_inc = annual_inc.toDouble
+
+    val mon_inc = ann_inc / MONTHLY
+
+    mon_pay / mon_inc
+  }
+
+  /**
+    * Ratio of revolving credit balance to the borrower’s monthly income.
+    */
+  def calculateRTI(revol_bal:String, annual_inc:String) = {
+    val rev_bal = revol_bal.toDouble
+    val mon_inc = annual_inc.toDouble / MONTHLY
+
+    rev_bal / mon_inc
   }
 }
