@@ -34,13 +34,14 @@ object Application {
 
     loanDF.select("loan_status").distinct().show(10)
 
-    Preprocess.run(loanDF)
+//    Preprocess.run(loanDF)
 
-    val training = spark.read.format("libsvm").load("data/sample_libsvm_data.txt")
-    training.show(5)
+    val training = spark.read.format("libsvm").load("data/2016Q2Feature-libsvm")
+    training.show(30)
+    training.rdd.map(row => row(1)).foreach(println)
 //    val lr = new LogisticRegression()
 //      .setMaxIter(10)
-//      .setRegParam(0.3)
+//      .setRegParam(0.03)
 //      .setElasticNetParam(0.8)
 //
 //    // Fit the model

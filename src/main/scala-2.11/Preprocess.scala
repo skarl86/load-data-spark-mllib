@@ -55,7 +55,11 @@ object Preprocess {
 
     preDataDF.printSchema()
     preDataDF.show(5)
-    preDataDF.select("term").distinct().show(100)
+    println(preDataDF.rdd.map(row => calculateLoanStatus(row(0))).count())
+    preDataDF.rdd.map(row => calculateLoanStatus(row(0)))
+      .map{ loan_status => (loan_status, 1)}
+      .reduceByKey(_ + _).foreach(println)
+    preDataDF.select("loan_status").distinct().show(100)
 
 //    preDataDF.limit(5).rdd.map(row => calculateITP(row(13).toString, row(1).toString)).foreach(println)
     val featureRow = preDataDF.rdd.map(manipulateData)
@@ -113,7 +117,7 @@ object Preprocess {
     val revol_util = row(14)
     val revol_bal = row(15)       // Total credit revolving balance
 
-    var new_loan_status = 0.0
+    var new_loan_status = false
     var new_annual_inc = 0.0
     var new_credit_age = 0.0
     var new_deliq = 0
@@ -130,12 +134,7 @@ object Preprocess {
     var new_revol_util = 0.0
     var new_rti = 0.0
 
-    if(loan_status.equals("Fully Paid")){
-      new_loan_status = 1.0
-    }else{
-      new_loan_status = 0.0
-    }
-
+    new_loan_status = calculateLoanStatus(loan_status)
     new_annual_inc = calculateAnnualIncome(annual_inc)
     new_credit_age = calculateCreditAge(credit_age)
     new_deliq = calculateDeliq(deliq)
@@ -174,6 +173,7 @@ object Preprocess {
     )
 
   }
+
   def transferNullToIntValue(param:Any) = {
     if(param != null){
       param.toString.toInt
@@ -189,6 +189,22 @@ object Preprocess {
       0.0
     }
   }
+
+  /**
+    *
+    * @param loan_status
+    * @return
+    */
+  def calculateLoanStatus(loan_status:Any) = {
+    var new_loan_status = false
+
+    if(loan_status.toString.equals("Fully Paid")){
+      new_loan_status = true
+    }
+
+    new_loan_status
+  }
+
   def calculateInquiries(inq_last_6mths:Any) = {
     transferNullToIntValue(inq_last_6mths)
   }
